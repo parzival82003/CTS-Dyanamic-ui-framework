@@ -39,6 +39,12 @@ def check_health(url):
         print(f"An error occurred while checking health: {str(e)}")
         return "Unhealthy"
 
+def perform_security_test(url):
+    if url.startswith("http://"):
+        return "Insecure"
+    else:
+        return "Secure"
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -47,7 +53,7 @@ def index():
 def check():
     website_url = request.form['website_url']
     health_status = check_health(website_url)
-
+    security_status = perform_security_test(website_url)
     try:
         cursor.execute("INSERT INTO website_health (url, status) VALUES (?, ?)", (website_url, health_status))
         db.commit()
@@ -59,10 +65,10 @@ def check():
         redis_client.set(website_url, health_status)
     except redis.exceptions.ConnectionError as e:
         print(f"Error connecting to Redis: {str(e)}")
+    redis_output = redis_client.get(website_url).decode('utf-8')
+    return render_template('result.html', website_url=website_url, health_status=health_status, redis_output=redis_output, security_test=security_status)
 
-    return render_template('result.html', website_url=website_url, health_status=health_status)
-
-if __name__ == '__main__':
+if __name__== '__main__':
     try:
         db = sqlite3.connect('website_health.db')
         cursor = db.cursor()
